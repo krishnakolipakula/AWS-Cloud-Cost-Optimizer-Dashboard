@@ -1,0 +1,197 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  AWS Cloud Cost Optimizer Dashboard
+  
+  SAM Template for serverless backend infrastructure including API Gateway, 
+  Lambda functions, and DynamoDB tables.
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 30
+    Runtime: nodejs22.x
+    Environment:
+      Variables:
+        USE_MOCK_DATA: true
+        COSTS_TABLE_NAME: !Ref CostsTable
+        BUDGETS_TABLE_NAME: !Ref BudgetsTable
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment name
+
+Resources:
+  # API Gateway
+  CostOptimizerApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Environment
+      Description: API for AWS Cloud Cost Optimizer Dashboard
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Content-Type'"
+        AllowOrigin: "'*'"
+      
+  # Lambda Functions
+  GetCostsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../lambdas/get-costs/
+      Handler: index.handler
+      Description: Retrieve cost data with filtering
+      Events:
+        GetCosts:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CostOptimizerApi
+            Path: /costs
+            Method: get
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref CostsTable
+
+  SetBudgetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../lambdas/set-budget/
+      Handler: index.handler
+      Description: Manage budgets and alerts
+      Events:
+        CreateBudget:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CostOptimizerApi
+            Path: /budgets
+            Method: post
+        GetBudgets:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CostOptimizerApi
+            Path: /budgets
+            Method: get
+        GetAlerts:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CostOptimizerApi
+            Path: /alerts
+            Method: get
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BudgetsTable
+
+  # DynamoDB Tables
+  CostsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'cloud_costs_${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: CostOptimizer
+
+  BudgetsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'budgets_${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: CostOptimizer
+
+  # CloudWatch Log Groups
+  GetCostsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${GetCostsFunction}'
+      RetentionInDays: 14
+
+  SetBudgetLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${SetBudgetFunction}'
+      RetentionInDays: 14
+
+  # CloudWatch Alarms for monitoring
+  GetCostsErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: High error rate for GetCosts function
+      AlarmName: !Sub '${AWS::StackName}-GetCosts-Errors'
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 2
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Period: 300
+      Statistic: Sum
+      Threshold: 5
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref GetCostsFunction
+
+Outputs:
+  CostOptimizerApiUrl:
+    Description: "API Gateway endpoint URL for Cost Optimizer API"
+    Value: !Sub "https://${CostOptimizerApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/"
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiUrl"
+
+  GetCostsFunctionArn:
+    Description: "Get Costs Lambda Function ARN"
+    Value: !GetAtt GetCostsFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-GetCostsFunction"
+
+  SetBudgetFunctionArn:
+    Description: "Set Budget Lambda Function ARN"
+    Value: !GetAtt SetBudgetFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-SetBudgetFunction"
+
+  CostsTableName:
+    Description: "DynamoDB table name for costs"
+    Value: !Ref CostsTable
+    Export:
+      Name: !Sub "${AWS::StackName}-CostsTable"
+
+  BudgetsTableName:
+    Description: "DynamoDB table name for budgets"
+    Value: !Ref BudgetsTable
+    Export:
+      Name: !Sub "${AWS::StackName}-BudgetsTable"

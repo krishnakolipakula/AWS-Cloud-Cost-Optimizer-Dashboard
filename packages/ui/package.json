@@ -1,0 +1,17 @@
+{
+  "name": "@aws-cost-optimizer/ui",
+  "version": "1.0.0",
+  "description": "Shared UI components for AWS Cloud Cost Optimizer Dashboard",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'Building shared UI components'",
+    "test": "echo 'No tests yet'"
+  },
+  "keywords": ["aws", "cost", "ui", "components"],
+  "author": "Krishna Chaitanya",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "@angular/core": ">=20.0.0"
+  }
+}

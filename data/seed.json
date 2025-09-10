@@ -1,0 +1,12 @@
+[
+  { "date": "2025-08-01", "service": "Amazon EC2", "region": "us-east-1", "cost": 12.34 },
+  { "date": "2025-08-01", "service": "Amazon S3",  "region": "us-east-1", "cost": 3.21  },
+  { "date": "2025-08-02", "service": "AWS Lambda",  "region": "us-west-2", "cost": 1.15 },
+  { "date": "2025-08-02", "service": "Amazon EC2", "region": "us-east-1", "cost": 15.67 },
+  { "date": "2025-08-02", "service": "Amazon S3",  "region": "us-west-2", "cost": 2.89 },
+  { "date": "2025-08-03", "service": "AWS Lambda",  "region": "us-east-1", "cost": 0.95 },
+  { "date": "2025-08-03", "service": "Amazon EC2", "region": "us-west-2", "cost": 18.23 },
+  { "date": "2025-08-03", "service": "Amazon RDS",  "region": "us-east-1", "cost": 25.50 },
+  { "date": "2025-08-04", "service": "Amazon S3",  "region": "us-east-1", "cost": 4.12 },
+  { "date": "2025-08-04", "service": "AWS Lambda",  "region": "us-west-2", "cost": 1.33 }
+]

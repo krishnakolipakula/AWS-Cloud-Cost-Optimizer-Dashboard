@@ -1,0 +1,50 @@
+{
+  "name": "aws-cloud-cost-optimizer-dashboard",
+  "version": "1.0.0",
+  "description": "A multi-framework AWS cloud cost monitoring dashboard with React analytics and Angular budget management",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "lambdas/*"
+  ],
+  "scripts": {
+    "build": "npm run build:react && npm run build:angular",
+    "build:react": "cd apps/react-analytics && npm run build",
+    "build:angular": "cd apps/angular-budgets && npm run build",
+    "dev:react": "cd apps/react-analytics && npm run dev",
+    "dev:angular": "cd apps/angular-budgets && npm start",
+    "install:all": "npm install && cd apps/react-analytics && npm install && cd ../angular-budgets && npm install && cd ../../lambdas/get-costs && npm install && cd ../set-budget && npm install",
+    "sam:build": "cd infra && sam build",
+    "sam:deploy": "cd infra && sam deploy --guided",
+    "sam:local": "cd infra && sam local start-api",
+    "test": "echo 'Running tests for all packages'",
+    "lint": "echo 'Running linting for all packages'",
+    "clean": "rm -rf apps/*/dist apps/*/node_modules packages/*/node_modules lambdas/*/node_modules node_modules"
+  },
+  "keywords": [
+    "aws",
+    "cloud",
+    "cost",
+    "optimization",
+    "dashboard",
+    "react",
+    "angular",
+    "serverless",
+    "lambda",
+    "dynamodb"
+  ],
+  "author": "Krishna Chaitanya",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/krishnakolipakula/AWS-Cloud-Cost-Optimizer-Dashboard.git"
+  }
+}

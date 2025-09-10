@@ -1,0 +1,87 @@
+<div class="budget-container">
+  <h2>Budget Management</h2>
+  
+  <!-- Budget Form -->
+  <div class="budget-form">
+    <h3>Create New Budget</h3>
+    <form (ngSubmit)="onSubmit()" #budgetForm="ngForm">
+      <div class="form-group">
+        <label for="amount">Budget Amount ($)</label>
+        <input 
+          type="number" 
+          id="amount" 
+          name="amount" 
+          [(ngModel)]="budget.amount" 
+          required 
+          min="0" 
+          step="0.01"
+          class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="period">Period</label>
+        <select id="period" name="period" [(ngModel)]="budget.period" class="form-control">
+          <option value="monthly">Monthly</option>
+          <option value="quarterly">Quarterly</option>
+          <option value="yearly">Yearly</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>
+          <input 
+            type="checkbox" 
+            name="alertsEnabled" 
+            [(ngModel)]="budget.alertsEnabled">
+          Enable Alerts
+        </label>
+      </div>
+      
+      <div class="form-group" *ngIf="budget.alertsEnabled">
+        <label for="alertThreshold">Alert Threshold (%)</label>
+        <input 
+          type="number" 
+          id="alertThreshold" 
+          name="alertThreshold" 
+          [(ngModel)]="budget.alertThreshold" 
+          min="1" 
+          max="100"
+          class="form-control">
+      </div>
+      
+      <button type="submit" [disabled]="!budgetForm.form.valid" class="btn btn-primary">
+        Create Budget
+      </button>
+    </form>
+  </div>
+  
+  <!-- Budget List -->
+  <div class="budget-list">
+    <h3>Current Budgets</h3>
+    <div *ngIf="budgets.length === 0" class="no-budgets">
+      No budgets created yet.
+    </div>
+    
+    <div *ngFor="let budgetItem of budgets" class="budget-card">
+      <div class="budget-header">
+        <h4>${{budgetItem.amount}} / {{budgetItem.period}}</h4>
+        <button class="btn btn-danger btn-sm" (click)="deleteBudget(budgetItem.id)">Delete</button>
+      </div>
+      
+      <div class="budget-details">
+        <p>Current Spend: ${{budgetItem.currentSpend}}</p>
+        <p>Remaining: ${{budgetItem.amount - budgetItem.currentSpend}}</p>
+        <div class="progress-bar">
+          <div 
+            class="progress-fill" 
+            [style.width.%]="(budgetItem.currentSpend / budgetItem.amount) * 100"
+            [class.warning]="(budgetItem.currentSpend / budgetItem.amount) * 100 >= budgetItem.alertThreshold">
+          </div>
+        </div>
+        <p *ngIf="budgetItem.alertsEnabled">
+          Alerts: Enabled ({{budgetItem.alertThreshold}}% threshold)
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
