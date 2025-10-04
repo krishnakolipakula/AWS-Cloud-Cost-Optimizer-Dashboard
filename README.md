@@ -17,23 +17,23 @@ This full-stack application addresses the real-world challenge of cloud cost opt
 
 ## 🖼️ Dashboard Screenshots
 
-### Main Analytics Dashboard
-![Dashboard Overview](docs/images/dashboard-overview.png)
-*Interactive cost analytics dashboard with real-time charts and filtering controls*
+### Full Dashboard Overview
+![Full Dashboard Screenshot](docs/images/Full%20dashboard%20screenshot.png)
+*Complete cloud cost monitoring dashboard with interactive charts, real-time data, and filtering controls*
 
-### Service Cost Distribution
-![Service Cost Chart](docs/images/service-cost-chart.png)
-*Doughnut chart showing cost breakdown across AWS services (EC2, S3, RDS, Lambda, etc.)*
+### Charts and Data Summary
+![Charts and Data Summary](docs/images/Charts%20and%20data%20summary.png)
+*Comprehensive view of cost analytics with multiple chart types and data insights*
 
-### Regional Cost Analysis  
-![Region Cost Chart](docs/images/region-cost-chart.png)
-*Geographic distribution of AWS costs across different regions*
+### Service and Region Cost Distribution
+![Service and Region Cost Distribution](docs/images/service%20and%20region%20wise%20cost%20distribution.png)
+*Interactive visualizations showing cost breakdown across AWS services and geographic regions*
 
-### Time Series Trends
-![Time Series Chart](docs/images/time-series-chart.png)
-*Historical cost trends with daily/monthly patterns and forecasting*
+### Advanced Filters and Controls
+![Filters Services Regions and Cost Chart](docs/images/Filters%20services%20regions%20and%20cost%20chart.png)
+*Dynamic filtering capabilities with service selection, region filtering, and real-time chart updates*
 
-> 📸 **Live Demo**: The dashboard is fully interactive with Chart.js powered visualizations, real-time filtering, and responsive Bootstrap design.
+> 📸 **Live Demo**: The dashboard features fully interactive Chart.js visualizations, real-time filtering, responsive Bootstrap design, and processes 1000+ mock AWS billing records for realistic cost analysis.
 
 ## 🏗️ Architecture Overview
 

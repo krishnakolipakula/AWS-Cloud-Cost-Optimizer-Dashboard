@@ -2,25 +2,25 @@
 
 ## 🖼️ Live Dashboard Views
 
-### Main Dashboard Overview
-![Dashboard Overview](images/dashboard-overview.png)
-*Complete cost analytics dashboard with interactive charts and filtering controls*
+# Dashboard Screenshots
 
-### Service-wise Cost Distribution
-![Service Cost Chart](images/service-cost-chart.png)
-*Interactive doughnut chart showing costs across AWS services (EC2, S3, RDS, Lambda, etc.)*
+## 🖼️ Live Dashboard Views
 
-### Regional Cost Analysis
-![Region Cost Chart](images/region-cost-chart.png)
-*Cost distribution across different AWS regions*
+### Full Dashboard Overview
+![Full Dashboard Screenshot](images/Full%20dashboard%20screenshot.png)
+*Complete cloud cost monitoring dashboard showcasing all interactive charts and filtering controls in action*
 
-### Time Series Analysis
-![Time Series Chart](images/time-series-chart.png)
-*Daily cost trends and historical analysis*
+### Charts and Data Summary
+![Charts and Data Summary](images/Charts%20and%20data%20summary.png)
+*Comprehensive analytics view with multiple visualization types displaying AWS cost insights and trends*
 
-### Interactive Filters
-![Filter Controls](images/filter-controls.png)
-*Date range selection, service filtering, and real-time chart updates*
+### Service and Region Cost Distribution
+![Service and Region Cost Distribution](images/service%20and%20region%20wise%20cost%20distribution.png)
+*Interactive doughnut and bar charts showing cost breakdown across AWS services (EC2, S3, RDS, Lambda) and geographic regions*
+
+### Advanced Filtering and Controls
+![Filters Services Regions and Cost Chart](images/Filters%20services%20regions%20and%20cost%20chart.png)
+*Dynamic filtering interface with service selection, region filtering, date ranges, and real-time chart updates*
 
 ## 🎯 Key Features Demonstrated
 
