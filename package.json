@@ -1,0 +1,33 @@
+{
+  "name": "cloud-cost-monitoring-solution",
+  "version": "1.0.0",
+  "description": "A comprehensive cloud cost monitoring solution inspired by AWS Cost Explorer",
+  "main": "index.js",
+  "scripts": {
+    "install-all": "npm install && cd react-analytics-dashboard && npm install && cd ../angular-budget-alerts && npm install && cd ../aws-backend && npm install",
+    "build-all": "cd react-analytics-dashboard && npm run build && cd ../angular-budget-alerts && npm run build",
+    "deploy": "cd deployment && npm run deploy",
+    "test": "echo \"Running tests for all components...\" && cd react-analytics-dashboard && npm test && cd ../angular-budget-alerts && npm test && cd ../aws-backend && npm test"
+  },
+  "keywords": [
+    "aws",
+    "cost-monitoring",
+    "cloud",
+    "finops",
+    "react",
+    "angular",
+    "lambda",
+    "dynamodb",
+    "cloudwatch"
+  ],
+  "author": "Krishna",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/cloud-cost-monitoring-solution.git"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  }
+}

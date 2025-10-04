@@ -1,0 +1,38 @@
+{
+  "name": "cloudmern-deployment",
+  "version": "1.0.0",
+  "description": "Deployment configuration and scripts for Cloud Cost Monitoring Solution",
+  "main": "index.js",
+  "scripts": {
+    "deploy": "npm run deploy:infrastructure && npm run deploy:backend && npm run deploy:frontend",
+    "deploy:infrastructure": "aws cloudformation deploy --template-file infrastructure/main.yaml --stack-name cloudmern-infrastructure --capabilities CAPABILITY_IAM",
+    "deploy:backend": "cd ../aws-backend && npm run deploy:prod",
+    "deploy:frontend": "npm run build:react && npm run build:angular && npm run upload:s3 && npm run invalidate:cloudfront",
+    "build:react": "cd ../react-analytics-dashboard && npm run build",
+    "build:angular": "cd ../angular-budget-alerts && npm run build",
+    "upload:s3": "node scripts/upload-to-s3.js",
+    "invalidate:cloudfront": "node scripts/invalidate-cloudfront.js",
+    "setup:domain": "node scripts/setup-domain.js",
+    "configure:ssl": "node scripts/configure-ssl.js",
+    "test:deployment": "node scripts/test-deployment.js",
+    "rollback": "node scripts/rollback.js",
+    "cleanup": "node scripts/cleanup.js"
+  },
+  "keywords": [
+    "aws",
+    "deployment",
+    "s3",
+    "cloudfront",
+    "lambda",
+    "cloudformation"
+  ],
+  "author": "Krishna",
+  "license": "MIT",
+  "devDependencies": {
+    "aws-sdk": "^2.1490.0",
+    "chalk": "^4.1.2",
+    "commander": "^11.0.0",
+    "dotenv": "^16.3.1",
+    "ora": "^6.3.1"
+  }
+}

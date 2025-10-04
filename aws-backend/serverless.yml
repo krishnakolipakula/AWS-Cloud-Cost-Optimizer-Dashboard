@@ -1,0 +1,323 @@
+service: cloud-cost-monitoring-backend
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  
+  environment:
+    STAGE: ${self:provider.stage}
+    REGION: ${self:provider.region}
+    BILLING_TABLE: ${self:service}-billing-${self:provider.stage}
+    BUDGETS_TABLE: ${self:service}-budgets-${self:provider.stage}
+    ALERTS_TABLE: ${self:service}-alerts-${self:provider.stage}
+    CORS_ORIGIN: ${opt:cors-origin, '*'}
+    JWT_SECRET: ${opt:jwt-secret, 'your-jwt-secret-here'}
+    
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:BatchGetItem
+            - dynamodb:BatchWriteItem
+          Resource:
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.BILLING_TABLE}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.BUDGETS_TABLE}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ALERTS_TABLE}"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.BILLING_TABLE}/index/*"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.BUDGETS_TABLE}/index/*"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.ALERTS_TABLE}/index/*"
+        - Effect: Allow
+          Action:
+            - cloudwatch:PutMetricData
+            - cloudwatch:GetMetricStatistics
+            - cloudwatch:ListMetrics
+            - cloudwatch:PutMetricAlarm
+            - cloudwatch:DeleteAlarms
+            - cloudwatch:DescribeAlarms
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - sns:Publish
+            - sns:CreateTopic
+            - sns:Subscribe
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
+          Resource: "*"
+
+plugins:
+  - serverless-typescript
+  - serverless-offline
+
+functions:
+  # Billing Data Functions
+  getBillingData:
+    handler: src/handlers/billing.getBillingData
+    events:
+      - http:
+          path: /api/billing-data
+          method: get
+          cors: true
+          
+  createBillingRecord:
+    handler: src/handlers/billing.createBillingRecord
+    events:
+      - http:
+          path: /api/billing-data
+          method: post
+          cors: true
+          
+  processBillingData:
+    handler: src/handlers/billing.processBillingData
+    timeout: 300
+    events:
+      - schedule: rate(1 hour)  # Process billing data hourly
+      
+  # Budget Management Functions
+  getBudgets:
+    handler: src/handlers/budgets.getBudgets
+    events:
+      - http:
+          path: /api/budgets
+          method: get
+          cors: true
+          
+  createBudget:
+    handler: src/handlers/budgets.createBudget
+    events:
+      - http:
+          path: /api/budgets
+          method: post
+          cors: true
+          
+  updateBudget:
+    handler: src/handlers/budgets.updateBudget
+    events:
+      - http:
+          path: /api/budgets/{id}
+          method: put
+          cors: true
+          
+  deleteBudget:
+    handler: src/handlers/budgets.deleteBudget
+    events:
+      - http:
+          path: /api/budgets/{id}
+          method: delete
+          cors: true
+          
+  getBudgetStatus:
+    handler: src/handlers/budgets.getBudgetStatus
+    events:
+      - http:
+          path: /api/budgets/{id}/status
+          method: get
+          cors: true
+          
+  # Alert Functions
+  getAlerts:
+    handler: src/handlers/alerts.getAlerts
+    events:
+      - http:
+          path: /api/alerts
+          method: get
+          cors: true
+          
+  createAlert:
+    handler: src/handlers/alerts.createAlert
+    events:
+      - http:
+          path: /api/alerts
+          method: post
+          cors: true
+          
+  budgetMonitor:
+    handler: src/handlers/alerts.budgetMonitor
+    timeout: 300
+    events:
+      - schedule: rate(15 minutes)  # Check budgets every 15 minutes
+      
+  # Analytics Functions
+  getServiceCosts:
+    handler: src/handlers/analytics.getServiceCosts
+    events:
+      - http:
+          path: /api/analytics/service-costs
+          method: get
+          cors: true
+          
+  getRegionCosts:
+    handler: src/handlers/analytics.getRegionCosts
+    events:
+      - http:
+          path: /api/analytics/region-costs
+          method: get
+          cors: true
+          
+  getDailyCosts:
+    handler: src/handlers/analytics.getDailyCosts
+    events:
+      - http:
+          path: /api/analytics/daily-costs
+          method: get
+          cors: true
+          
+  # Data Seeding Function
+  seedMockData:
+    handler: src/handlers/data-seeder.seedMockData
+    timeout: 300
+    events:
+      - http:
+          path: /api/seed-data
+          method: post
+          cors: true
+
+resources:
+  Resources:
+    # DynamoDB Tables
+    BillingTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.BILLING_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: date
+            AttributeType: S
+          - AttributeName: service
+            AttributeType: S
+          - AttributeName: region
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: DateIndex
+            KeySchema:
+              - AttributeName: date
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
+          - IndexName: ServiceIndex
+            KeySchema:
+              - AttributeName: service
+                KeyType: HASH
+              - AttributeName: date
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
+          - IndexName: RegionIndex
+            KeySchema:
+              - AttributeName: region
+                KeyType: HASH
+              - AttributeName: date
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
+        BillingMode: PAY_PER_REQUEST
+        
+    BudgetsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.BUDGETS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: service
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: UserIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
+          - IndexName: ServiceIndex
+            KeySchema:
+              - AttributeName: service
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
+        BillingMode: PAY_PER_REQUEST
+        
+    AlertsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.ALERTS_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: budgetId
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: N
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: BudgetIndex
+            KeySchema:
+              - AttributeName: budgetId
+                KeyType: HASH
+              - AttributeName: timestamp
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
+          - IndexName: TimestampIndex
+            KeySchema:
+              - AttributeName: timestamp
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            BillingMode: PAY_PER_REQUEST
+        BillingMode: PAY_PER_REQUEST
+        
+    # SNS Topic for Alerts
+    BudgetAlertsTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: ${self:service}-budget-alerts-${self:provider.stage}
+        DisplayName: "Budget Alerts for Cloud Cost Monitoring"
+        
+  Outputs:
+    ApiGatewayRestApiId:
+      Value:
+        Ref: ApiGatewayRestApi
+      Export:
+        Name: ${self:service}-${self:provider.stage}-restApiId
+        
+    ApiGatewayRestApiRootResourceId:
+      Value:
+        Fn::GetAtt:
+          - ApiGatewayRestApi
+          - RootResourceId
+      Export:
+        Name: ${self:service}-${self:provider.stage}-rootResourceId
+        
+    BudgetAlertsTopicArn:
+      Value:
+        Ref: BudgetAlertsTopic
+      Export:
+        Name: ${self:service}-${self:provider.stage}-budgetAlertsTopicArn

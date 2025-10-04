@@ -1,0 +1,321 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Cloud Cost Monitoring Solution - S3 + CloudFront Infrastructure'
+
+Parameters:
+  DomainName:
+    Type: String
+    Default: cloudmern.example.com
+    Description: Domain name for the application
+  Environment:
+    Type: String
+    Default: prod
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment name
+  CertificateArn:
+    Type: String
+    Description: ACM Certificate ARN for HTTPS (must be in us-east-1)
+    Default: ''
+
+Conditions:
+  HasCustomDomain: !Not [!Equals [!Ref CertificateArn, '']]
+
+Resources:
+  # S3 Bucket for React Analytics Dashboard
+  ReactAppBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::StackName}-react-dashboard-${Environment}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, HEAD]
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+
+  # S3 Bucket Policy for React App
+  ReactAppBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ReactAppBucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Sub '${ReactAppBucket}/*'
+
+  # S3 Bucket for Angular Budget & Alerts App
+  AngularAppBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::StackName}-angular-budget-${Environment}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, HEAD]
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+
+  # S3 Bucket Policy for Angular App
+  AngularAppBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AngularAppBucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Sub '${AngularAppBucket}/*'
+
+  # CloudFront Origin Access Control for better security
+  CloudFrontOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub '${AWS::StackName}-OAC'
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # CloudFront Distribution for React Analytics Dashboard
+  ReactCloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !GetAtt ReactAppBucket.RegionalDomainName
+            Id: ReactS3Origin
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+            OriginAccessControlId: !GetAtt CloudFrontOriginAccessControl.Id
+        Enabled: true
+        HttpVersion: http2
+        DefaultRootObject: index.html
+        Aliases: !If
+          - HasCustomDomain
+          - [!Sub 'dashboard.${DomainName}']
+          - !Ref AWS::NoValue
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - DELETE
+            - GET
+            - HEAD
+            - OPTIONS
+            - PATCH
+            - POST
+            - PUT
+          TargetOriginId: ReactS3Origin
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+          ViewerProtocolPolicy: redirect-to-https
+          MinTTL: 0
+          DefaultTTL: 300
+          MaxTTL: 86400
+          Compress: true
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+        ViewerCertificate: !If
+          - HasCustomDomain
+          - AcmCertificateArn: !Ref CertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+        PriceClass: PriceClass_100  # Use only North America and Europe edge locations for cost optimization
+
+  # CloudFront Distribution for Angular Budget & Alerts App
+  AngularCloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !GetAtt AngularAppBucket.RegionalDomainName
+            Id: AngularS3Origin
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+            OriginAccessControlId: !GetAtt CloudFrontOriginAccessControl.Id
+        Enabled: true
+        HttpVersion: http2
+        DefaultRootObject: index.html
+        Aliases: !If
+          - HasCustomDomain
+          - [!Sub 'budget.${DomainName}']
+          - !Ref AWS::NoValue
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - DELETE
+            - GET
+            - HEAD
+            - OPTIONS
+            - PATCH
+            - POST
+            - PUT
+          TargetOriginId: AngularS3Origin
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+          ViewerProtocolPolicy: redirect-to-https
+          MinTTL: 0
+          DefaultTTL: 300
+          MaxTTL: 86400
+          Compress: true
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+        ViewerCertificate: !If
+          - HasCustomDomain
+          - AcmCertificateArn: !Ref CertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+        PriceClass: PriceClass_100
+
+  # Route53 Record for React Dashboard (if custom domain is used)
+  ReactDashboardRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasCustomDomain
+    Properties:
+      HostedZoneId: !Ref HostedZone
+      Name: !Sub 'dashboard.${DomainName}'
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ReactCloudFrontDistribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2  # CloudFront hosted zone ID
+
+  # Route53 Record for Angular Budget App (if custom domain is used)
+  AngularBudgetRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasCustomDomain
+    Properties:
+      HostedZoneId: !Ref HostedZone
+      Name: !Sub 'budget.${DomainName}'
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt AngularCloudFrontDistribution.DomainName
+        HostedZoneId: Z2FDTNDATAQYW2
+
+  # Hosted Zone (only if custom domain is used)
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Condition: HasCustomDomain
+    Properties:
+      Name: !Ref DomainName
+      HostedZoneConfig:
+        Comment: !Sub 'Hosted zone for ${DomainName}'
+
+  # CloudWatch Alarms for monitoring
+  ReactCloudFrontAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${AWS::StackName}-react-cloudfront-errors'
+      AlarmDescription: 'Monitor React CloudFront 4xx/5xx errors'
+      MetricName: 4xxErrorRate
+      Namespace: AWS/CloudFront
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: DistributionId
+          Value: !Ref ReactCloudFrontDistribution
+
+  AngularCloudFrontAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${AWS::StackName}-angular-cloudfront-errors'
+      AlarmDescription: 'Monitor Angular CloudFront 4xx/5xx errors'
+      MetricName: 4xxErrorRate
+      Namespace: AWS/CloudFront
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: DistributionId
+          Value: !Ref AngularCloudFrontDistribution
+
+Outputs:
+  ReactBucketName:
+    Description: 'S3 Bucket name for React Analytics Dashboard'
+    Value: !Ref ReactAppBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-ReactBucketName'
+
+  AngularBucketName:
+    Description: 'S3 Bucket name for Angular Budget & Alerts App'
+    Value: !Ref AngularAppBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-AngularBucketName'
+
+  ReactCloudFrontURL:
+    Description: 'CloudFront URL for React Analytics Dashboard'
+    Value: !Sub 'https://${ReactCloudFrontDistribution.DomainName}'
+    Export:
+      Name: !Sub '${AWS::StackName}-ReactCloudFrontURL'
+
+  AngularCloudFrontURL:
+    Description: 'CloudFront URL for Angular Budget & Alerts App'
+    Value: !Sub 'https://${AngularCloudFrontDistribution.DomainName}'
+    Export:
+      Name: !Sub '${AWS::StackName}-AngularCloudFrontURL'
+
+  ReactCloudFrontDistributionId:
+    Description: 'CloudFront Distribution ID for React app'
+    Value: !Ref ReactCloudFrontDistribution
+    Export:
+      Name: !Sub '${AWS::StackName}-ReactDistributionId'
+
+  AngularCloudFrontDistributionId:
+    Description: 'CloudFront Distribution ID for Angular app'
+    Value: !Ref AngularCloudFrontDistribution
+    Export:
+      Name: !Sub '${AWS::StackName}-AngularDistributionId'
+
+  CustomDomainReactURL:
+    Condition: HasCustomDomain
+    Description: 'Custom domain URL for React Dashboard'
+    Value: !Sub 'https://dashboard.${DomainName}'
+    Export:
+      Name: !Sub '${AWS::StackName}-CustomDomainReactURL'
+
+  CustomDomainAngularURL:
+    Condition: HasCustomDomain
+    Description: 'Custom domain URL for Angular Budget App'
+    Value: !Sub 'https://budget.${DomainName}'
+    Export:
+      Name: !Sub '${AWS::StackName}-CustomDomainAngularURL'
