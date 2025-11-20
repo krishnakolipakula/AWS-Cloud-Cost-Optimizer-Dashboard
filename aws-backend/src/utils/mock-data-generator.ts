@@ -55,24 +55,30 @@ const TEAMS = ['frontend', 'backend', 'data', 'devops', 'ml', 'mobile'];
 const PROJECTS = ['web-app', 'mobile-api', 'analytics', 'monitoring', 'backup', 'cdn'];
 const COST_CENTERS = ['CC-1001', 'CC-1002', 'CC-1003', 'CC-1004', 'CC-1005'];
 
-export const generateRandomCost = (service: string): number => {
+export const generateRandomCost = (service: string, seed?: number): number => {
   const range = SERVICE_COST_RANGES[service as keyof typeof SERVICE_COST_RANGES];
-  if (!range) return Math.random() * 100 + 1;
+  if (!range) return seed ? (seed % 100) + 1 : Math.random() * 100 + 1;
   
-  const cost = Math.random() * (range.max - range.min) + range.min;
+  const randomValue = seed ? (seed % 1000) / 1000 : Math.random();
+  const cost = randomValue * (range.max - range.min) + range.min;
   return Math.round(cost * 100) / 100; // Round to 2 decimal places
 };
 
-export const generateRandomUsage = (service: string): number => {
+export const generateRandomUsage = (service: string, seed?: number): number => {
   const range = SERVICE_USAGE_RANGES[service as keyof typeof SERVICE_USAGE_RANGES];
-  if (!range) return Math.random() * 1000 + 1;
+  if (!range) return seed ? (seed % 1000) + 1 : Math.random() * 1000 + 1;
   
-  const usage = Math.random() * (range.max - range.min) + range.min;
+  const randomValue = seed ? (seed % 1000) / 1000 : Math.random();
+  const usage = randomValue * (range.max - range.min) + range.min;
   return Math.round(usage * 100) / 100;
 };
 
-export const generateResourceId = (service: string): string => {
+export const generateResourceId = (service: string, index?: number): string => {
   const prefix = RESOURCE_PREFIXES[service as keyof typeof RESOURCE_PREFIXES] || 'res-';
+  if (index !== undefined) {
+    // Use deterministic ID for backend data
+    return prefix + 'backend' + index.toString().padStart(6, '0');
+  }
   const randomId = Math.random().toString(36).substr(2, 10);
   return prefix + randomId;
 };
@@ -225,10 +231,66 @@ export const generateAnomalyData = (
   for (let i = 0; i < count; i++) {
     const record = generateMockBillingRecord(date, service);
     record.cost = record.cost * multiplier; // Multiply cost to create anomaly
-    record.tags.AlertType = 'cost-anomaly';
-    record.tags.AnomalyMultiplier = multiplier.toString();
+    record.tags['AlertType'] = 'cost-anomaly';
+    record.tags['AnomalyMultiplier'] = multiplier.toString();
     records.push(record);
   }
+  
+  return records;
+};
+
+// Generate DETERMINISTIC data for backend API (same data every time)
+// This allows users to verify they're actually connected to the backend
+export const generateDeterministicBackendData = (
+  days: number = 90
+): CreateBillingRecordRequest[] => {
+  const records: CreateBillingRecordRequest[] = [];
+  const today = new Date();
+  
+  // Fixed services and regions for consistent data
+  const backendServices = ['EC2', 'S3', 'RDS', 'Lambda', 'DynamoDB'];
+  const backendRegions = ['us-east-1', 'us-west-2', 'eu-west-1'];
+  
+  let recordIndex = 0;
+  
+  // Generate data for each day
+  for (let day = 0; day < days; day++) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - day);
+    const dateStr = date.toISOString().split('T')[0];
+    
+    // Generate 3-5 records per day with deterministic values
+    backendServices.forEach((service, serviceIdx) => {
+      backendRegions.forEach((region, regionIdx) => {
+        // Only create records for some combinations to avoid too much data
+        if ((day + serviceIdx + regionIdx) % 3 === 0) {
+          recordIndex++;
+          const seed = day * 100 + serviceIdx * 10 + regionIdx;
+          
+          records.push({
+            date: dateStr,
+            service: service,
+            region: region,
+            cost: generateRandomCost(service, seed),
+            usage: generateRandomUsage(service, seed),
+            unit: SERVICE_COST_RANGES[service as keyof typeof SERVICE_COST_RANGES]?.unit || 'units',
+            resourceId: generateResourceId(service, recordIndex),
+            tags: {
+              Environment: 'BACKEND-API',
+              DataSource: 'AWS-Lambda-Function',
+              Team: TEAMS[seed % TEAMS.length] || 'backend',
+              Project: PROJECTS[seed % PROJECTS.length] || 'web-app',
+              CostCenter: COST_CENTERS[seed % COST_CENTERS.length] || 'CC-1001',
+              BackendGenerated: 'true'
+            }
+          });
+        }
+      });
+    });
+  }
+  
+  // Sort by date descending (newest first)
+  records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   
   return records;
 };

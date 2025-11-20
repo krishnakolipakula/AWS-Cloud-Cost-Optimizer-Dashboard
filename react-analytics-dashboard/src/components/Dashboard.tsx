@@ -21,6 +21,26 @@ const Dashboard: React.FC<DashboardProps> = ({ billingData }) => {
     regions: []
   });
 
+  // Detect data source from tags
+  const dataSource = useMemo(() => {
+    if (billingData.length > 0 && billingData[0].tags) {
+      if (billingData[0].tags['BackendGenerated'] === 'true') {
+        return {
+          type: 'backend',
+          name: 'AWS Lambda Backend API',
+          color: 'success',
+          icon: '🔌'
+        };
+      }
+    }
+    return {
+      type: 'mock',
+      name: 'Frontend Mock Data',
+      color: 'secondary',
+      icon: '📊'
+    };
+  }, [billingData]);
+
   const filteredData = useMemo(() => {
     return filterBillingData(billingData, filters);
   }, [billingData, filters]);
@@ -38,8 +58,19 @@ const Dashboard: React.FC<DashboardProps> = ({ billingData }) => {
       {/* Dashboard Header */}
       <div className="dashboard-header">
         <div className="container">
-          <h1>Cloud Cost Analytics Dashboard</h1>
-          <p>Monitor and optimize your AWS spending with real-time insights</p>
+          <div className="d-flex justify-content-between align-items-center">
+            <div>
+              <h1>Cloud Cost Analytics Dashboard</h1>
+              <p>Monitor and optimize your AWS spending with real-time insights</p>
+            </div>
+            <div className={`badge bg-${dataSource.color} p-3`} style={{ fontSize: '1rem' }}>
+              {dataSource.icon} {dataSource.name}
+              <br />
+              <small className="text-white-50">
+                {billingData.length} records • {dataSource.type === 'backend' ? 'FIXED DATA' : 'RANDOM DATA'}
+              </small>
+            </div>
+          </div>
         </div>
       </div>
 

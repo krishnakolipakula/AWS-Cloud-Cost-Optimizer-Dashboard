@@ -3,7 +3,7 @@ import { BillingService } from '../services/billing.service';
 import { createResponse } from '../utils/response';
 import { validateRequest } from '../utils/validation';
 import { CreateBillingRecordRequest, AnalyticsQuery } from '../models/types';
-import { generateMockBillingData } from '../utils/mock-data-generator';
+import { generateMockBillingData, generateDeterministicBackendData } from '../utils/mock-data-generator';
 
 const billingService = new BillingService();
 
@@ -21,7 +21,18 @@ export const getBillingData = async (
       limit: queryParams.limit ? parseInt(queryParams.limit, 10) : 1000
     };
 
-    const billingRecords = await billingService.getBillingRecords(query);
+    // For local development, use mock data
+    const isLocal = process.env.IS_OFFLINE === 'true' || !process.env.AWS_EXECUTION_ENV;
+    let billingRecords;
+    
+    if (isLocal) {
+      console.log('🔧 Using DETERMINISTIC backend data (same data every refresh)');
+      // Use deterministic data so users can verify backend connection
+      billingRecords = generateDeterministicBackendData(90);
+      console.log(`✓ Generated ${billingRecords.length} consistent backend records`);
+    } else {
+      billingRecords = await billingService.getBillingRecords(query);
+    }
 
     return createResponse(200, {
       success: true,

@@ -2,7 +2,47 @@
 
 A comprehensive, production-ready cloud cost monitoring solution inspired by AWS Cost Explorer, designed to help businesses manage and optimize their AWS spending through interactive dashboards and proactive budget controls.
 
-## 🚀 Project Overview
+## 🚀 Quick Start (Local Development)
+
+### Prerequisites
+- Node.js v24+ installed
+- npm v11+ installed
+- Git for version control
+
+### Start the Application
+
+**Option 1: Using Batch Files (Recommended)**
+```bash
+# Terminal 1 - Start Backend API on port 4000
+.\start-backend.bat
+
+# Terminal 2 - Start React Dashboard on port 3002
+.\start-frontend.bat
+```
+
+**Option 2: Manual Start**
+```bash
+# Terminal 1 - Backend
+cd aws-backend
+npm run start:local
+
+# Terminal 2 - Frontend
+cd react-analytics-dashboard
+npm start
+```
+
+### Access Points
+- **Dashboard**: http://localhost:3002
+- **Backend API**: http://localhost:4000
+- **API Endpoints**: http://localhost:4000/api/billing-data
+
+### Verify Connection
+✅ Look for **green badge** "✓ Connected to Backend"  
+✅ Dashboard shows **"FIXED DATA"** when using backend API  
+✅ Toggle switch to test Mock Data vs Backend API  
+✅ Backend data stays consistent across refreshes
+
+## 📊 Project Overview
 
 This full-stack application addresses the real-world challenge of cloud cost optimization—a critical focus for Amazon's FinOps strategy. Built with modern web technologies and AWS serverless architecture, it provides actionable insights and proactive budget controls for effective cloud cost management.
 
